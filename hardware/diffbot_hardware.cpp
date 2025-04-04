@@ -84,8 +84,8 @@ public:
     void handler(const reg_udral_physics_kinematics_rotation_Planar_0_1& js_read, CanardRxTransfer* transfer) override {
       
         //std::cout << "Node id: " << +transfer->metadata.remote_node_id << std::endl;
-        w_pos[transfer->metadata.remote_node_id-4] = js_read.angular_position.radian;
-        w_vel[transfer->metadata.remote_node_id-4] = js_read.angular_velocity.radian_per_second;
+        w_pos[transfer->metadata.remote_node_id] = js_read.angular_position.radian;
+        w_vel[transfer->metadata.remote_node_id] = js_read.angular_velocity.radian_per_second;
     }
 };
 JSReader * JS_reader;
@@ -93,20 +93,6 @@ JSReader * JS_reader;
 
 static CanardTransferID int_transfer_id = 0;
 
-// void send_twist_cmd(CanardNodeID node_id, float pos, float vel, float eff) {
-// 	int_transfer_id++;
-// 	reg_udral_physics_kinematics_rotation_Planar_0_1 js_msg =
-// 	{
-// 			.angular_position = pos,
-// 			.angular_velocity = vel,
-// 			.angular_acceleration = eff
-// 	};
-//     cy_interface->send_msg<JS_msg>(
-// 		&js_msg,
-// 		sub_port_id[node_id],
-// 		&int_transfer_id
-// 	);
-// }
 
 void send_twist_cmd(CanardNodeID node_id, float pos, float vel, float eff) {
 	int_transfer_id++;
@@ -298,7 +284,6 @@ hardware_interface::return_type DiffBotSystemHardware::read(
       //auto velo = get_command(descr.get_prefix_name() + "/" + hardware_interface::HW_IF_VELOCITY);
       //set_state(name, get_state(name) + period.seconds() * velo);
       set_state(name, w_pos[0]);
-
       ss << std::endl
          << "\t position " << get_state(name) << " and velocity " << w_vel[0] << " for '" << name
          << "'!";
@@ -311,13 +296,12 @@ hardware_interface::return_type DiffBotSystemHardware::read(
       //auto velo = get_command(descr.get_prefix_name() + "/" + hardware_interface::HW_IF_VELOCITY);
       //set_state(name, get_state(name) + period.seconds() * velo);
       set_state(name, w_vel[0]);
-
       ss << std::endl
-         << "\t position " << get_state(name) << " and velocity " << w_vel[0] << " for '" << name
+         << "\t position " <<  w_pos[0] << " and velocity " << get_state(name) << " for '" << name
          << "'!";
     }
+    cy_interface->loop();
   }
-  cy_interface->loop();
   RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 500, "%s", ss.str().c_str());
   // END: This part here is for exemplary purposes - Please do not copy to your production code
 
@@ -341,7 +325,6 @@ hardware_interface::return_type diffbot ::DiffBotSystemHardware::write(
     ss << std::fixed << std::setprecision(2) << std::endl
        << "\t" << "command " << vel << " for '" << name << "'!";
   }
-  cy_interface->loop();
   RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 500, "%s", ss.str().c_str());
   // END: This part here is for exemplary purposes - Please do not copy to your production code
 
