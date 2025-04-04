@@ -1,5 +1,0 @@
-# Default initial positions for vr_hand's ros2_control fake system
-
-initial_positions:
-  left_wheel_joint: 0
-  right_wheel_joint: 0

@@ -6,5 +6,4 @@
   <xacro:include filename="$(find diffbot)/config/diffbot.materials.xacro" />
   <xacro:include filename="$(find diffbot)/config/diffbot.ros2_control.xacro" />
   <xacro:diffbot_ros2_control name="DiffBot" />
-  <!-- initial_positions_file="$(arg initial_positions_file)"/> -->
 </robot>
