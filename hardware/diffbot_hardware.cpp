@@ -42,7 +42,7 @@
 
 
 
-TYPE_ALIAS(Twist, reg_udral_physics_kinematics_cartesian_Twist_0_1)
+TYPE_ALIAS(Twist_msg, reg_udral_physics_kinematics_cartesian_Twist_0_1)
 TYPE_ALIAS(HBeat, uavcan_node_Heartbeat_1_0)
 TYPE_ALIAS(JS_msg, reg_udral_physics_kinematics_rotation_Planar_0_1)
 TYPE_ALIAS(State, reg_udral_physics_kinematics_cartesian_State_0_1)
@@ -79,13 +79,13 @@ class JSReader: public AbstractSubscription<JS_msg> {
 public:
     JSReader(InterfacePtr interface): AbstractSubscription<JS_msg>(
       interface,
-      AGENT_JS_SUB_PORT
+      ODOM_PORT
     ) {};
     void handler(const reg_udral_physics_kinematics_rotation_Planar_0_1& js_read, CanardRxTransfer* transfer) override {
       
         //std::cout << "Node id: " << +transfer->metadata.remote_node_id << std::endl;
-        w_pos[transfer->metadata.remote_node_id-1] = js_read.angular_position.radian;
-        w_vel[transfer->metadata.remote_node_id-1] = js_read.angular_velocity.radian_per_second;
+        w_pos[transfer->metadata.remote_node_id-4] = js_read.angular_position.radian;
+        w_vel[transfer->metadata.remote_node_id-4] = js_read.angular_velocity.radian_per_second;
     }
 };
 JSReader * JS_reader;
@@ -93,16 +93,30 @@ JSReader * JS_reader;
 
 static CanardTransferID int_transfer_id = 0;
 
+// void send_twist_cmd(CanardNodeID node_id, float pos, float vel, float eff) {
+// 	int_transfer_id++;
+// 	reg_udral_physics_kinematics_rotation_Planar_0_1 js_msg =
+// 	{
+// 			.angular_position = pos,
+// 			.angular_velocity = vel,
+// 			.angular_acceleration = eff
+// 	};
+//     cy_interface->send_msg<JS_msg>(
+// 		&js_msg,
+// 		sub_port_id[node_id],
+// 		&int_transfer_id
+// 	);
+// }
+
 void send_twist_cmd(CanardNodeID node_id, float pos, float vel, float eff) {
 	int_transfer_id++;
-	reg_udral_physics_kinematics_rotation_Planar_0_1 js_msg =
+	reg_udral_physics_kinematics_cartesian_Twist_0_1 twist_msg =
 	{
-			.angular_position = pos,
-			.angular_velocity = vel,
-			.angular_acceleration = eff
-	};
-    cy_interface->send_msg<JS_msg>(
-		&js_msg,
+    twist_msg.angular.radian_per_second[2] = vel
+  };
+
+    cy_interface->send_msg<Twist_msg>(
+		&twist_msg,
 		sub_port_id[node_id],
 		&int_transfer_id
 	);
@@ -270,6 +284,7 @@ hardware_interface::return_type DiffBotSystemHardware::read(
   const rclcpp::Time & /*time*/, const rclcpp::Duration & period)
 {
   // BEGIN: This part here is for exemplary purposes - Please do not copy to your production code
+  cy_interface->loop();
   std::stringstream ss;
   ss << "Reading states:";
   ss << std::fixed << std::setprecision(2);
@@ -280,14 +295,29 @@ hardware_interface::return_type DiffBotSystemHardware::read(
       // Simulate DiffBot wheels's movement as a first-order system
       // Update the joint status: this is a revolute joint without any limit.
       // Simply integrates
-      auto velo = get_command(descr.get_prefix_name() + "/" + hardware_interface::HW_IF_VELOCITY);
-      set_state(name, get_state(name) + period.seconds() * velo);
+      //auto velo = get_command(descr.get_prefix_name() + "/" + hardware_interface::HW_IF_VELOCITY);
+      //set_state(name, get_state(name) + period.seconds() * velo);
+      set_state(name, w_pos[0]);
 
       ss << std::endl
-         << "\t position " << get_state(name) << " and velocity " << velo << " for '" << name
+         << "\t position " << get_state(name) << " and velocity " << w_vel[0] << " for '" << name
+         << "'!";
+    }
+    if (descr.get_interface_name() == hardware_interface::HW_IF_VELOCITY)
+    {
+      // Simulate DiffBot wheels's movement as a first-order system
+      // Update the joint status: this is a revolute joint without any limit.
+      // Simply integrates
+      //auto velo = get_command(descr.get_prefix_name() + "/" + hardware_interface::HW_IF_VELOCITY);
+      //set_state(name, get_state(name) + period.seconds() * velo);
+      set_state(name, w_vel[0]);
+
+      ss << std::endl
+         << "\t position " << get_state(name) << " and velocity " << w_vel[0] << " for '" << name
          << "'!";
     }
   }
+  cy_interface->loop();
   RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 500, "%s", ss.str().c_str());
   // END: This part here is for exemplary purposes - Please do not copy to your production code
 
@@ -302,12 +332,16 @@ hardware_interface::return_type diffbot ::DiffBotSystemHardware::write(
   ss << "Writing commands:";
   for (const auto & [name, descr] : joint_command_interfaces_)
   {
+    auto vel = get_command(name);
     // Simulate sending commands to the hardware
-    set_state(name, get_command(name));
+
+    send_twist_cmd(0, 0.0, vel, 0.0);
+    cy_interface->loop();
 
     ss << std::fixed << std::setprecision(2) << std::endl
-       << "\t" << "command " << get_command(name) << " for '" << name << "'!";
+       << "\t" << "command " << vel << " for '" << name << "'!";
   }
+  cy_interface->loop();
   RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 500, "%s", ss.str().c_str());
   // END: This part here is for exemplary purposes - Please do not copy to your production code
 

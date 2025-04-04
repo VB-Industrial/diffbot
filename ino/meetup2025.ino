@@ -103,7 +103,7 @@ public:
           AbstractSubscription<Twist>(interface, port_id)
           {};
     void handler(const Twist::Type& msg, CanardRxTransfer* _) override {
-        target_velocity = msg.angular.radian_per_second[0];
+        target_velocity = msg.angular.radian_per_second[2];
         Serial.println(target_velocity);
     }
 };
