@@ -83,11 +83,11 @@ UtilityConfig utilities(micros, error_handler);
 constexpr micros_t MICROS_S = 1'000'000;
 
 
-static constexpr CanardNodeID NODE_ID = 4;
+static constexpr CanardNodeID NODE_ID = 0;
 
-static constexpr CanardPortID ODOM_PORT = (NODE_ID * 100) + 2000; //2400
-static constexpr CanardPortID K_PORT = ODOM_PORT + 10;//2410
-static constexpr CanardPortID CMD_VEL_SUB = ODOM_PORT + 50; //2450
+static constexpr CanardPortID ODOM_PORT = (NODE_ID * 100) + 2000; //2000
+static constexpr CanardPortID K_PORT = ODOM_PORT + 10;//2010
+static constexpr CanardPortID CMD_VEL_SUB = ODOM_PORT + 50; //2050
 
 
 static millis_t uptime = 0;
@@ -280,8 +280,8 @@ void send_odom_data(){
     static CanardTransferID odom_transfer_id = 0;
 
     Odom::Type msg = {
-        .angular_position = motor.shaft_velocity,
-        .angular_velocity = sensor.getAngle() - offset_angle  
+        .angular_position = sensor.getAngle() - offset_angle,
+        .angular_velocity = motor.shaft_velocity
     };
  
     cyphal_interface->send_msg<Odom>(&msg, ODOM_PORT, &odom_transfer_id);
